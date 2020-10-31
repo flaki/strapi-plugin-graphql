@@ -7,9 +7,8 @@
 const _ = require('lodash');
 const compose = require('koa-compose');
 
-const { RedisPubSub } = require('graphql-redis-subscriptions');
 const { PubSub } = require('graphql-subscriptions');
-const Redis = require('ioredis');
+
 const { policy: policyUtils } = require('strapi-utils');
 const {
   convertToParams,
@@ -20,26 +19,8 @@ const {
   isResolvablePath,
 } = require('./utils');
 
-//Choose between Redis and standart PubSub if Redis config is present
 const pubsub = (() => {
-  if (strapi.config.hook.settings.redis) {
-    const options = {
-      host: strapi.config.hook.settings.redis.host,
-      port: strapi.config.hook.settings.redis.port,
-      password: strapi.config.hook.settings.redis.password,
-      db: strapi.config.hook.settings.redis.options.db,
-      retry_strategy: options => {
-        // reconnect after
-        return Math.max(options.attempt * 100, 3000);
-      },
-    };
-    return new RedisPubSub({
-      publisher: new Redis(options),
-      subscriber: new Redis(options),
-    });
-  } else {
-    return new PubSub();
-  }
+  return new PubSub();
 })();
 
 strapi.graphql = {
@@ -90,7 +71,7 @@ const buildMutation = (mutationName, config) => {
 const buildMutationContext = ({ options, graphqlContext }) => {
   const { context } = graphqlContext;
 
-  const ctx = context.app.createContext(_.clone(context.req), _.clone(context.res));
+  const ctx = cloneKoaContext(context);
 
   if (options.input && options.input.where) {
     ctx.params = convertToParams(options.input.where || {});
@@ -484,11 +465,19 @@ const validateResolverOption = config => {
   return true;
 };
 
+const cloneKoaContext = ctx => {
+  return Object.assign(ctx.app.createContext(_.clone(ctx.req), _.clone(ctx.res)), {
+    state: {
+      ...ctx.state,
+    },
+  });
+};
+
 const buildQueryContext = ({ options, graphqlContext }) => {
   const { context } = graphqlContext;
   const _options = _.cloneDeep(options);
 
-  const ctx = context.app.createContext(_.clone(context.req), _.clone(context.res));
+  const ctx = cloneKoaContext(context);
 
   // Note: we've to used the Object.defineProperties to reset the prototype. It seems that the cloning the context
   // cause a lost of the Object prototype.
