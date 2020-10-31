@@ -9,6 +9,8 @@ const compose = require('koa-compose');
 
 const { PubSub } = require('graphql-subscriptions');
 
+const { toSingular, toSubscriptionAction } = require('./naming');
+
 const { policy: policyUtils } = require('strapi-utils');
 const {
   convertToParams,
@@ -141,8 +143,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (params, populate) => {
             _originalTrigger(params, populate);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: [],
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: [],
               },
             });
           };
@@ -151,8 +153,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (results, params, populate) => {
             _originalTrigger(results, params, populate);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: results,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: results,
               },
             });
           };
@@ -161,8 +163,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (params, populate) => {
             _originalTrigger(params, populate);
             pubsub.publish(`${resolver}_${params.id}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: params,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: params,
               },
             });
           };
@@ -171,8 +173,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, params, populate) => {
             _originalTrigger(result, params, populate);
             pubsub.publish(`${resolver}_${params.id}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: result,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: result,
               },
             });
           };
@@ -181,8 +183,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async data => {
             _originalTrigger(data);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: data,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: data,
               },
             });
           };
@@ -191,8 +193,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, data) => {
             _originalTrigger(result, data);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: result,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: result,
               },
             });
           };
@@ -201,8 +203,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (params, data) => {
             _originalTrigger(params, data);
             pubsub.publish(`${resolver}_${params.id}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: data,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: data,
               },
             });
           };
@@ -211,8 +213,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, params, data) => {
             _originalTrigger(result, params, data);
             pubsub.publish(`${resolver}_${params.id}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: result,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: result,
               },
             });
           };
@@ -221,8 +223,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async params => {
             _originalTrigger(params);
             pubsub.publish(`${resolver}_${params.id}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: params,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: params,
               },
             });
           };
@@ -231,8 +233,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, params) => {
             _originalTrigger(result, params);
             pubsub.publish(`${resolver}_${params.id}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: params,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: params,
               },
             });
           };
@@ -241,8 +243,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (params, populate) => {
             _originalTrigger(params, populate);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: [],
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: [],
               },
             });
           };
@@ -251,8 +253,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, params) => {
             _originalTrigger(result, params);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: result,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: result,
               },
             });
           };
@@ -261,7 +263,7 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async params => {
             _originalTrigger(params);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
                 count: 0,
               },
             });
@@ -271,7 +273,7 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, params) => {
             _originalTrigger(result, params);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
                 count: result,
               },
             });
@@ -281,8 +283,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (params, populate) => {
             _originalTrigger(params, populate);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: [],
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: [],
               },
             });
           };
@@ -291,8 +293,8 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, params) => {
             _originalTrigger(result, params);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
-                [`${model.modelName}`]: result,
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
+                [`${toSingular(model.modelName)}`]: result,
               },
             });
           };
@@ -301,7 +303,7 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async params => {
             _originalTrigger(params);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
                 count: 0,
               },
             });
@@ -311,7 +313,7 @@ const buildSubscription = (subscriptionName, config, model) => {
           model.lifecycles[actionDetails.action] = async (result, params) => {
             _originalTrigger(result, params);
             pubsub.publish(`${resolver}`, {
-              [`${actionDetails.action}${_.upperFirst(model.modelName)}`]: {
+              [toSubscriptionAction(actionDetails.action, model.modelName)]: {
                 count: result,
               },
             });
