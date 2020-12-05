@@ -67,6 +67,25 @@ const generateSchema = () => {
     .join('\n');
 
   // Concatenate.
+  let subsDef;
+  if ((typeof subscriptionFields === 'string' && subscriptionFields.trim() != '')
+  || (typeof subscription === 'string' && subscription.trim() != '')) {
+    console.log(subscriptionFields, 'fields');
+    console.log(subscription, 'subs');
+    subsDef = `
+    type Subscription {
+      ${subscriptionFields}
+      ${subscription}
+    }
+    `;
+  // If no subscriptions exist remove the type otherwise it will break
+  } else {
+    subsDef = ``;
+    // If no Subscriptions type, it must also be removed from Resolvers
+    // (it should be empty anyway)
+    delete resolvers.Subscription;
+  }
+
   let typeDefs = `
       ${definition}
       ${shadowCRUD.definition}
@@ -93,10 +112,7 @@ const generateSchema = () => {
         ${mutation}
       }
 
-      type Subscription {
-        ${subscriptionFields}
-        ${subscription}
-      }
+      ${subsDef}
 
       ${scalarDef}
     `;
