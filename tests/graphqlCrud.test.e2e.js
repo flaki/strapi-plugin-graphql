@@ -1,11 +1,14 @@
+'use strict';
+
 // Helpers.
-const { registerAndLogin } = require('../../../test/helpers/auth');
-const createModelsUtils = require('../../../test/helpers/models');
+const { createTestBuilder } = require('../../../test/helpers/builder');
+const { createStrapiInstance } = require('../../../test/helpers/strapi');
 const { createAuthRequest } = require('../../../test/helpers/request');
 
+const builder = createTestBuilder();
+let strapi;
 let rq;
 let graphqlQuery;
-let modelsUtils;
 
 const postModel = {
   attributes: {
@@ -27,8 +30,10 @@ const postModel = {
 
 describe('Test Graphql API End to End', () => {
   beforeAll(async () => {
-    const token = await registerAndLogin();
-    rq = createAuthRequest(token);
+    await builder.addContentType(postModel).build();
+
+    strapi = await createStrapiInstance();
+    rq = await createAuthRequest({ strapi });
 
     graphqlQuery = body => {
       return rq({
@@ -37,13 +42,12 @@ describe('Test Graphql API End to End', () => {
         body,
       });
     };
-
-    modelsUtils = createModelsUtils({ rq });
-
-    await modelsUtils.createContentTypes([postModel]);
   }, 60000);
 
-  afterAll(() => modelsUtils.deleteContentTypes(['post']), 60000);
+  afterAll(async () => {
+    await strapi.destroy();
+    await builder.cleanup();
+  }, 60000);
 
   describe('Test CRUD', () => {
     const postsPayload = [
@@ -179,6 +183,35 @@ describe('Test Graphql API End to End', () => {
       });
     });
 
+    test.skip('List posts with `created_by` and `updated_by`', async () => {
+      const res = await graphqlQuery({
+        query: /* GraphQL */ `
+          {
+            posts(start: 1) {
+              id
+              name
+              bigint
+              nullable
+              created_by {
+                username
+              }
+              updated_by {
+                username
+              }
+            }
+          }
+        `,
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      // no errors should be present in the response
+      expect(res.body.error).toBeUndefined();
+
+      // since the posts are created without AdminUser, it should return null
+      expect(res.body.data.posts[0].created_by).toBeNull();
+    });
+
     test.each([
       [
         {
@@ -249,6 +282,49 @@ describe('Test Graphql API End to End', () => {
         },
         [postsPayload[0]],
       ],
+      [
+        {
+          _or: [{ name_in: ['post 2'] }, { bigint_eq: 1316130638171 }],
+        },
+        [postsPayload[0], postsPayload[1]],
+      ],
+      [
+        {
+          _where: { nullable_null: false },
+        },
+        [postsPayload[0]],
+      ],
+      [
+        {
+          _where: { _or: { nullable_null: false } },
+        },
+        [postsPayload[0]],
+      ],
+      [
+        {
+          _where: [{ nullable_null: false }],
+        },
+        [postsPayload[0]],
+      ],
+      [
+        {
+          _where: [{ _or: [{ name_in: ['post 2'] }, { bigint_eq: 1316130638171 }] }],
+        },
+        [postsPayload[0], postsPayload[1]],
+      ],
+      [
+        {
+          _where: [
+            {
+              _or: [
+                { name_in: ['post 2'] },
+                { _or: [{ bigint_eq: 1316130638171 }, { nullable_null: false }] },
+              ],
+            },
+          ],
+        },
+        [postsPayload[0], postsPayload[1]],
+      ],
     ])('List posts with where clause %o', async (where, expected) => {
       const res = await graphqlQuery({
         query: /* GraphQL */ `
@@ -277,9 +353,7 @@ describe('Test Graphql API End to End', () => {
 
       // all expected values are in the result
       expected.forEach(expectedPost => {
-        expect(res.body.data.posts).toEqual(
-          expect.arrayContaining([expectedPost])
-        );
+        expect(res.body.data.posts).toEqual(expect.arrayContaining([expectedPost]));
       });
     });
 
