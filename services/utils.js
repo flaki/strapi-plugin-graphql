@@ -4,15 +4,27 @@ const _ = require('lodash');
 const { QUERY_OPERATORS } = require('strapi-utils');
 
 /**
- * Merges
+ * @typedef {object} Schema
+ * @property {object} resolvers
+ * @property {object} subscription
+ * @property {object} mutation
+ * @property {object} query
+ * @property {string} definition
  */
-const mergeSchemas = (root, ...subs) => {
-  subs.forEach(sub => {
+
+/**
+ * Merges strapi graphql schema together
+ * @param {Schema} object - destination object
+ * @param  {Schema[]} sources - source objects to merge into the destination object
+ * @returns {Schema}
+ */
+const mergeSchemas = (object, ...sources) => {
+  sources.forEach(sub => {
     if (_.isEmpty(sub)) return;
     const { definition = '', query = {}, mutation = {}, subscription = {}, resolvers = {} } = sub;
 
-    root.definition += '\n' + definition;
-    _.merge(root, {
+    object.definition += '\n' + definition;
+    _.merge(object, {
       query,
       mutation,
       subscription,
@@ -20,9 +32,13 @@ const mergeSchemas = (root, ...subs) => {
     });
   });
 
-  return root;
+  return object;
 };
 
+/**
+ * Returns an empty schema
+ * @returns {Schema}
+ */
 const createDefaultSchema = () => ({
   definition: '',
   query: {},
@@ -141,14 +157,14 @@ const getActionDetails = resolver => {
     const [, path] = resolver.split('::');
     const [plugin, controller, action] = path.split('.');
 
-    return { source: 'plugins', plugin, controller, action };
+    return { plugin, controller, action };
   }
 
   if (resolver.startsWith('application::')) {
     const [, path] = resolver.split('::');
     const [api, controller, action] = path.split('.');
 
-    return { source: 'application', api, controller, action };
+    return { api, controller, action };
   }
 
   const args = resolver.split('.');

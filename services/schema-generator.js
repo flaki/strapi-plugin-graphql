@@ -13,8 +13,8 @@ const _ = require('lodash');
 const graphql = require('graphql');
 const PublicationState = require('../types/publication-state');
 const Types = require('./type-builder');
-const { buildModels } = require('./type-definitions');
-const { mergeSchemas, createDefaultSchema, diffResolvers } = require('./utils');
+const buildShadowCrud = require('./shadow-crud');
+const { createDefaultSchema, diffResolvers } = require('./utils');
 const { toSDL } = require('./schema-definitions');
 const { buildQuery, buildMutation, buildSubscription } = require('./resolvers-builder');
 
@@ -25,13 +25,17 @@ const { buildQuery, buildMutation, buildSubscription } = require('./resolvers-bu
  */
 
 const generateSchema = () => {
-  const isFederated = _.get(strapi.plugins.graphql.config, 'isFederated', false);
+  const isFederated = _.get(strapi.plugins.graphql.config, 'federation', false);
   const shadowCRUDEnabled = strapi.plugins.graphql.config.shadowCRUD !== false;
 
-  // Generate type definition and query/mutation/subscription for models.
-  const shadowCRUD = shadowCRUDEnabled ? buildModelsShadowCRUD() : createDefaultSchema();
-
   const _schema = strapi.plugins.graphql.config._schema.graphql;
+
+  const ctx = {
+    schema: _schema,
+  };
+
+  // Generate type definition and query/mutation for models.
+  const shadowCRUD = shadowCRUDEnabled ? buildShadowCrud(ctx) : createDefaultSchema();
 
   // Extract custom definition, query or resolver.
   const { definition, query, mutation, subscription, resolver = {} } = _schema;
@@ -58,6 +62,7 @@ const generateSchema = () => {
   const subscriptionFields =
     shadowCRUD.subscription &&
     toSDL(shadowCRUD.subscription, resolver.Subscription, null, 'subscription');
+
   Object.assign(resolvers, PublicationState.resolver);
 
   const scalars = Types.getScalars();
@@ -68,12 +73,10 @@ const generateSchema = () => {
     .map(key => `scalar ${key}`)
     .join('\n');
 
-  // Concatenate.
+
   let subsDef;
   if ((typeof subscriptionFields === 'string' && subscriptionFields.trim() != '')
   || (typeof subscription === 'string' && subscription.trim() != '')) {
-    console.log(subscriptionFields, 'fields');
-    console.log(subscription, 'subs');
     subsDef = `
     type Subscription {
       ${subscriptionFields}
@@ -88,22 +91,28 @@ const generateSchema = () => {
     delete resolvers.Subscription;
   }
 
+  // Concatenate.
+  // Manually defined to avoid exposing all attributes (like password etc.)
   let typeDefs = `
       ${definition}
       ${shadowCRUD.definition}
       ${polymorphicSchema.definition}
       ${Types.addInput()}
+
       ${PublicationState.definition}
+
       type AdminUser {
         id: ID!
         username: String
         firstname: String!
         lastname: String!
       }
+
       type Query {
         ${queryFields}
         ${query}
       }
+
       type Mutation {
         ${mutationFields}
         ${mutation}
@@ -149,25 +158,9 @@ const filterDisabledResolvers = (schema, extraResolvers) =>
  *
  * @return void
  */
-
 const writeGenerateSchema = schema => {
   const printSchema = graphql.printSchema(schema);
   return strapi.fs.writeAppFile('exports/graphql/schema.graphql', printSchema);
-};
-
-const buildModelsShadowCRUD = () => {
-  const models = Object.values(strapi.models).filter(model => model.internal !== true);
-
-  const pluginModels = Object.values(strapi.plugins)
-    .map(plugin => Object.values(plugin.models) || [])
-    .reduce((acc, arr) => acc.concat(arr), []);
-
-  const components = Object.values(strapi.components);
-
-  return mergeSchemas(
-    createDefaultSchema(),
-    ...buildModels([...models, ...pluginModels, ...components])
-  );
 };
 
 const buildResolvers = resolvers => {
